@@ -1,0 +1,46 @@
+name: Update jet heatmap SVG (Python)
+
+on:
+  schedule:
+    # Runs once a day at 05:30 UTC
+    - cron: "30 5 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Check GH token presence
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT || github.token }}
+        run: |
+          if [ -z "${GH_TOKEN}" ]; then
+            echo "Error: GH_TOKEN is not set. Add a GH_PAT repository secret or allow github.token as fallback."
+            exit 1
+          else
+            echo "GH_TOKEN is present."
+          fi
+
+      - name: Generate Jet Heatmap SVG
+        env:
+          GH_USERNAME: ${{ github.repository_owner }}
+          GH_TOKEN: ${{ secrets.GH_PAT || github.token }}
+          OUTPUT_PATH: dist/github-jet.svg
+        run: python generate_jet_heatmap.py
+
+      - name: Commit and push if changed
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: update jet heatmap SVG"
+          file_pattern: dist/github-jet.svg
